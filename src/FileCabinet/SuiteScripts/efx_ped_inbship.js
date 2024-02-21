@@ -24,12 +24,12 @@ function(currentRecord, log, record, search) {
      * @since 2015.2
      */
     function pageInit(scriptContext) {
-        var inbship_rec	 = scriptContext.currentRecord;
-        // var no_pos = inbship_rec.getLineCount({
-        //     sublistId:	   'items'
-        // });
+        /* var inbship_rec	 = scriptContext.currentRecord;
+        var no_pos = inbship_rec.getLineCount({
+             sublistId:	   'items'
+        });
         // //Probar esto para ver si asi podemos poner la aduana de la OC en el inbound
-        // log.audit({title: 'Se encontro  ' + no_pos + ' orden de compra', details: ''});
+        log.audit({title: 'Se encontro  ' + no_pos + ' orden de compra', details: ''}); */
 
 
 
@@ -87,31 +87,38 @@ function(currentRecord, log, record, search) {
                 //Here we need to go into the cust record aduanas (TBC) to get the name of the aduana
                 //Since we don't have the internalid netsuite gave to the record matching our Codigo SAT aduana, we
                 // need to do a search first to retrieve the internalid of NS and then load that record
+                
+                // Busqueda del ID del SAT utilizando el ID Interno
+                
+                var buscaIdAduana = search.create({
+                    // Busqueda en el catalogo de aduanas
+                    type:'customrecord_efx_ped_aduanas',
+                    // Filtros, buscar si esta activo y si el ID del SAT es igual a adua_ped
+                    filters: [
+                        ['isinactive',search.Operator.IS,'F']
+                        ,'AND',
+                        ['custrecord_efx_ped_ad_id_sat',search.Operator.IS,adua_ped]
+                    ],
+                    // Obtener el internalID de la aduana
+                    columns:[
+                        search.createColumn({name:'internalid'}),
+                    ],
+                });
+                // Ejecucion de la busqueda
+                var ejecutar_busqueda = buscaIdAduana.run();
+                // Obtener el rango de datos
+                var resultado_busqueda = ejecutar_busqueda.getRange(0, 100);
+                // Guardar el valor obtenido en la variable id_sat_ped
+                var id_sat_ped = resultado_busqueda[0].getValue({name:'internalid'});
+                // Utiliza la variable id_sat_ped para mostrar el nombre de la aduana
+                inb_rec.setValue('custrecord_efx_ped_inb_aduana', id_sat_ped)
 
-                inb_rec.setValue('custrecord_efx_ped_inb_aduana', adua_ped)
-
-                // var buscaidaduana = search.create({
-                //     type:'customrecord_efx_ped_aduanas',
-                //     filters: [
-                //         ['isinactive',search.Operator.IS,'F']
-                //         ,'AND',
-                //         ['custrecord_efx_ped_ad_id_sat',search.Operator.IS,adua_ped]
-                //     ],
-                //     columns:[
-                //         search.createColumn({name:'internalid'}),
-                //         search.createColumn({name:'name'})
-                //     ],
-                // });
-                //
-                // var ejecutar_busqueda = buscaidaduana.run();
-                // var resultado_busqueda = ejecutar_busqueda.getRange(0, 100);
-                // //log.audit({title:'resultado_pedimento',details:resultado_busqueda});
-                // //log.audit({title:'resultado_pedimento',details:resultado_busqueda.length});
+                // log.debug({title:'resultado_pedimento',details:resultado_busqueda});
+                // log.debug({title:'resultado_pedimento',details:resultado_busqueda.length});
                 //
                 // //Solo tratar de obtener el internalid de la aduana en caso de que exista (traiga resultados la
                 // // busqueda)
                 // if(resultado_busqueda.length > 0){
-                //     var id_rec_aduana = resultado_busqueda[0].getValue({name:'internalid'});
                 //     var nom_aduana = resultado_busqueda[0].getValue({name:'name'});
                 //
                 //     var adua_idsatynom = adua_ped + ' - ' + nom_aduana;

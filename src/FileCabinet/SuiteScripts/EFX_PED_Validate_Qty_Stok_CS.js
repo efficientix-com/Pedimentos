@@ -105,6 +105,22 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                         }
                         break;
                     case '2':
+                        if (fieldTypeMovement === '2' && fieldNoPedimento !== '') {
+                            objMsg.status = 'NOT_PED'
+                            objMsg.message = 'Esta intentando hacer una salida de inventario, no coloque el pedimento.<br/>Verifique su entrada.'
+                            createMessage(objMsg);
+                            return false;
+                        
+                        }else if (fieldTypeMovement === '2' && campo_cantidad>0){
+                            objMsg.status = 'NOT_POSITIVO'
+                            objMsg.message = 'Esta intentando hacer una salida de cantidad positiva en una salida de inventario.<br/>Verifique su entrada.'
+                            createMessage(objMsg);
+                            return false;
+
+                        } else {
+                            return true;
+                        }
+
                         if (scriptContext.currentRecord.isNew === false) {
 
                             // Obtencion de los numeros de series utilizados dentro de este ajuste de inventario 

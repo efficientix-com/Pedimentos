@@ -526,6 +526,7 @@ define(['N/record', 'N/search'], (record, search) => {
             return { array_pedimentoObj: [], validateToCreateMaster: false }
         }
     }
+
     function searchToHistoryPed(array_pedimentoObj, ubicacionLinea, record_now) {
         try {
             var filtros_pedimento = new Array();
@@ -645,6 +646,7 @@ define(['N/record', 'N/search'], (record, search) => {
             log.error({ title: 'Error searchToHistoryPed:', details: e });
         }
     }
+
     function generateMasterToPedimento(record_now, objToCreate, ubicacionLinea) {
         try {
             var ped_master_record = record.create({ type: 'customrecord_efx_ped_master_record', });
@@ -668,6 +670,7 @@ define(['N/record', 'N/search'], (record, search) => {
             log.error({ title: 'Error generateMasterToPedimento:', details: e });
         }
     }
+
     function generateHistoricToPedimento(record_now, objToCreate, pedimento_id) {
         try {
             var ped_history = record.create({ type: 'customrecord_efx_ped_record_history' });
@@ -762,6 +765,7 @@ define(['N/record', 'N/search'], (record, search) => {
 
 
     }
+
     function validatePedimento(inbShip) {
         var dataReturn = { succes: false, data: {} }
         try {
@@ -776,8 +780,9 @@ define(['N/record', 'N/search'], (record, search) => {
         }
         return dataReturn;
     }
-    const buscaPedimentos = (pedimentos_linea) => {
 
+    const buscaPedimentos = (pedimentos_linea) => {
+        // Crea filtro para los pedimentos
         var filtros_pedimento = new Array();
         for (var i = 0; i < pedimentos_linea.length; i++) {
             var filtro = [['custrecord_efx_ped_number', search.Operator.IS, pedimentos_linea[i].pedimento], 'AND', ['custrecord_exf_ped_item', search.Operator.ANYOF, pedimentos_linea[i].item]];
@@ -788,7 +793,7 @@ define(['N/record', 'N/search'], (record, search) => {
             }
         }
         log.audit({ title: 'filtros_pedimento', details: filtros_pedimento });
-
+        // Se crea una busqueda en el master de pedimentos
         var buscaPed = search.create({
             type: 'customrecord_efx_ped_master_record',
             filters: [
@@ -804,12 +809,12 @@ define(['N/record', 'N/search'], (record, search) => {
                 search.createColumn({ name: 'internalid' }),
             ]
         });
-
+        // se ejecuta la busqueda anterior
         var ejecutar_pedimento = buscaPed.run();
         var resultado_pedimento = ejecutar_pedimento.getRange(0, 100);
 
         log.audit({ title: 'resultado_pedimento', details: resultado_pedimento });
-
+        // se crea Arreglo para llenarlo con los valores de la busqueda
         var arregloBusqueda = new Array();
         for (var x = 0; x < resultado_pedimento.length; x++) {
             var searchPedimentos = {
@@ -829,6 +834,7 @@ define(['N/record', 'N/search'], (record, search) => {
 
         return arregloBusqueda;
     }
+    
     const consultaPedimentos = (cantidad_ped, idPedimentos) => {
 
         log.audit({ title: 'cantidad_ped', details: cantidad_ped });

@@ -87,7 +87,20 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                             objMsg.message = 'Esta intentando hacer un ingreso de pedimento sin colocar el numero de pedimento.<br/>Verifique su entrada.'
                             createMessage(objMsg);
                             return false;
-                        }else{
+                        
+                        }else if (fieldTypeMovement !== '1'){
+                            objMsg.status = 'NOT_MOV_IN'
+                            objMsg.message = 'Esta intentando hacer un ingreso de pedimento sin colocar el tipo de movimiento como entrada.<br/>Verifique su entrada.'
+                            createMessage(objMsg);
+                            return false;
+
+                        }else if (fieldNoPedimento !== '' && fieldTypeMovement === '1' && campo_cantidad<0){
+                            objMsg.status = 'NOT_NEGATIVO'
+                            objMsg.message = 'Esta intentando hacer un ingreso de cantidad negativa en una entrada de inventario.<br/>Verifique su entrada.'
+                            createMessage(objMsg);
+                            return false;
+
+                        } else {
                             return true;
                         }
                         break;
@@ -431,6 +444,26 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                         showMsgCust.message = objMsg.message
                         showMsgCust.type = message.Type.WARNING
                         break;
+                    case 'NO_PED': // Error si se coloca el no. pedimento en el tipo de movimiento como salida
+                        showMsgCust.title = "No debe colocar el No. de pedimento en un movimiento de salida"
+                        showMsgCust.message = objMsg.message
+                        showMsgCust.type = message.Type.WARNING
+                        break; 
+                    case 'NOT_MOV_IN': // Error si se coloca el no. pedimento pero no el tipo de movimiento como entrada
+                        showMsgCust.title = "Debe colocar el Tipo de movimiento como Entrada"
+                        showMsgCust.message = objMsg.message
+                        showMsgCust.type = message.Type.WARNING
+                        break;  
+                    case 'NOT_NEGATIVO': // Error si ingresa valores negativos en la entrada
+                        showMsgCust.title = "Debe ingresar solo valores positivos"
+                        showMsgCust.message = objMsg.message
+                        showMsgCust.type = message.Type.WARNING
+                        break;
+                    case 'NOT_POSITIVO': // Error si ingresa valores positivos en la salida
+                        showMsgCust.title = "Debe ingresar solo valores negativos"
+                        showMsgCust.message = objMsg.message
+                        showMsgCust.type = message.Type.WARNING
+                        break;
                     case 'ERROR':
                         showMsgCust.title = "ERROR Script"
                         showMsgCust.message = 'Error script: ' + objMsg.e
@@ -448,6 +481,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                 console.error({ title: 'Error createMessage:', details: e });
             }
         }
+
         function getHistoricalMovement(idTran, arrItems, arrPed, location) {
             try {
                 let filterPed = [];
@@ -531,6 +565,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                 console.error({ title: 'Error getHistoricalMovement:', details: e });
             }
         }
+
         function getPedimento(dataItem, location, groupHist) {
             try {
                 var buscaPed = search.create({

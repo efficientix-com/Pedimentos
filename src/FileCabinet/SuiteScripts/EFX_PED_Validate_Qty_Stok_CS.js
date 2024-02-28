@@ -82,19 +82,14 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
 
                 switch (fieldTypeMovement) {
                     case '1':
+                        // Verifica que exista un numero de pedimento
                         if (fieldNoPedimento === '') {
                             objMsg.status = 'NOT_NO_PED'
                             objMsg.message = 'Esta intentando hacer un ingreso de pedimento sin colocar el numero de pedimento.<br/>Verifique su entrada.'
                             createMessage(objMsg);
                             return false;
                         
-                        }else if (fieldTypeMovement !== '1'){
-                            objMsg.status = 'NOT_MOV_IN'
-                            objMsg.message = 'Esta intentando hacer un ingreso de pedimento sin colocar el tipo de movimiento como entrada.<br/>Verifique su entrada.'
-                            createMessage(objMsg);
-                            return false;
-
-                        }else if (fieldNoPedimento !== '' && fieldTypeMovement === '1' && campo_cantidad<0){
+                        } else if (fieldNoPedimento !== '' && qtyPed<0){
                             objMsg.status = 'NOT_NEGATIVO'
                             objMsg.message = 'Esta intentando hacer un ingreso de cantidad negativa en una entrada de inventario.<br/>Verifique su entrada.'
                             createMessage(objMsg);
@@ -104,14 +99,15 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                             return true;
                         }
                         break;
+
                     case '2':
-                        if (fieldTypeMovement === '2' && fieldNoPedimento !== '') {
+                        if (fieldNoPedimento !== '') {
                             objMsg.status = 'NOT_PED'
-                            objMsg.message = 'Esta intentando hacer una salida de inventario, no coloque el pedimento.<br/>Verifique su entrada.'
+                            objMsg.message = 'Esta intentando hacer una salida de inventario, no coloque el numero de pedimento.<br/>Verifique su entrada.'
                             createMessage(objMsg);
                             return false;
                         
-                        }else if (fieldTypeMovement === '2' && campo_cantidad>0){
+                        } else if (fieldTypeMovement == '2' && qtyPed>0){
                             objMsg.status = 'NOT_POSITIVO'
                             objMsg.message = 'Esta intentando hacer una salida de cantidad positiva en una salida de inventario.<br/>Verifique su entrada.'
                             createMessage(objMsg);
@@ -258,8 +254,18 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                         }
 
                         return false;
+
                         break;
+
                     default:
+                        if (fieldNoPedimento !==''){
+                            objMsg.status = 'NOT_MOV_IN'
+                            objMsg.message = 'Esta intentando hacer un ingreso de pedimento sin colocar el tipo de movimiento como entrada.<br/>Verifique su entrada.'
+                            createMessage(objMsg);
+                            return false;
+                        } else {
+                            return true;
+                        }
 
                         break;
                 }
@@ -460,7 +466,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                         showMsgCust.message = objMsg.message
                         showMsgCust.type = message.Type.WARNING
                         break;
-                    case 'NO_PED': // Error si se coloca el no. pedimento en el tipo de movimiento como salida
+                    case 'NOT_PED': // Error si se coloca el no. pedimento en el tipo de movimiento como salida
                         showMsgCust.title = "No debe colocar el No. de pedimento en un movimiento de salida"
                         showMsgCust.message = objMsg.message
                         showMsgCust.type = message.Type.WARNING

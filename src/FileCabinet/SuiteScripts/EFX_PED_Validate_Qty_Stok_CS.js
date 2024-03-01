@@ -80,6 +80,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                 suma_cantidad = objAuxGetValues.suma_cantidad
                 suma_pedimento = objAuxGetValues.suma_pedimento
 
+                console.log({title: 'Cantidad', details: suma_cantidad});
                 switch (fieldTypeMovement) {
                     case '1':
                         // Verifica que exista un numero de pedimento
@@ -89,7 +90,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                             createMessage(objMsg);
                             return false;
                         
-                        } else if (fieldNoPedimento !== '' && qtyPed<0){
+                        } else if (fieldNoPedimento !== '' && suma_cantidad<0){
                             objMsg.status = 'NOT_NEGATIVO'
                             objMsg.message = 'Esta intentando hacer un ingreso de cantidad negativa en una entrada de inventario.<br/>Verifique su entrada.'
                             createMessage(objMsg);
@@ -107,7 +108,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                             createMessage(objMsg);
                             return false;
                         
-                        } else if (fieldTypeMovement == '2' && qtyPed>0){
+                        } else if (fieldTypeMovement == '2' && suma_cantidad>0){
                             objMsg.status = 'NOT_POSITIVO'
                             objMsg.message = 'Esta intentando hacer una salida de cantidad positiva en una salida de inventario.<br/>Verifique su entrada.'
                             createMessage(objMsg);
@@ -422,6 +423,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                 console.error({ title: 'Error getIdLotNumber:', details: e });
             }
         }
+
         function validaLines(arrLines, arrMaster, validCase) {
             try {
                 var mensaje = ''
@@ -446,6 +448,7 @@ define(['N/currentRecord', 'N/search', 'N/record', 'N/ui/message', 'N/log'],
                 console.error({ title: 'Error validaLines:', details: e });
             }
         }
+
         function createMessage(objMsg) {
             try {
                 var showMsgCust = {

@@ -375,6 +375,7 @@ define(['N/record', 'N/search'], (record, search) => {
                                     if (newPedObj.pedimento) {
                                         newPedObj.total = parseFloat(newPedObj.costo) * parseFloat(newPedObj.cantidad);
                                         array_pedimentoObj.push(newPedObj)
+                                        log.debug({ title: 'array_pedimentoObj EDIT', details: array_pedimentoObj });
                                     }
                                 })
                             } else {
@@ -382,13 +383,14 @@ define(['N/record', 'N/search'], (record, search) => {
                                 pedimentoObj.cantidad = parseFloat(record_now.getSublistValue({ sublistId: sublista, fieldId: campo_cantidad, line: i })) || '';
                                 if (pedimentoObj.pedimento) {
                                     array_pedimentoObj.push(pedimentoObj)
+                                    log.debug({ title: 'array_pedimentoObj EDIT', details: array_pedimentoObj });
                                 }
                             }
-                            
+
                         }
-                    
+
                     }
-                    
+
 
                     if (array_pedimentoObj.length > 0) {
                         searchToHistoryPed(array_pedimentoObj, ubicacionLinea, record_now)
@@ -419,7 +421,7 @@ define(['N/record', 'N/search'], (record, search) => {
 
                         var noLinRecNvo = record_now.getLineCount({ sublistId: sublista });
                         noPedimento = record_now.getValue({ fieldId: 'custbody_efx_ped_no_pedimento_oc' });
-                        log.debug({title: 'noPedimento', details: noPedimento});
+                        log.debug({ title: 'noPedimento', details: noPedimento });
                         switch (fieldTypeMovement) {
                             case '1':
                                 //Contar cuantas lineas traeria la sublista de este recibo
@@ -432,10 +434,11 @@ define(['N/record', 'N/search'], (record, search) => {
                                 let validateToCreateMaster = objAuxToGetLines[1];
                                 break;
                             case '2':
+                                let objAuxToGetLinesConsume = getValuesToLine(record_now, noLinRecNvo)
+                                log.debug({ title: '🟢 Arreglo de objetos para editar el maestro de pedimentos', details: objAuxToGetLinesConsume });
+                                array_pedimentoObj = objAuxToGetLinesConsume[0];
                                 break;
                         }
-                        log.debug({ title: '🟢 Arreglo de objetos para generar el maestro de pedimentos', details: array_pedimentoObj });
-
                         // Si se encontro al menos un articulo que posea articulo numero de pedimento entonces buscara y actualizará
                         if (array_pedimentoObj.length > 0 && false) {
 
@@ -459,7 +462,7 @@ define(['N/record', 'N/search'], (record, search) => {
                         log.audit({ title: 'Pedimentos por crear', details: array_pedimentoObj });
 
                         for (var tc = 0; tc < array_pedimentoObj.length; tc++) {
-                            var pedimento_id = generateMasterToPedimento(record_now, array_pedimentoObj[tc], ubicacionLinea);
+                            var pedimento_id = generateMasterToPedimento(record_now, array_pedimentoObj[tc], fieldTypeMovement);
                             generateHistoricToPedimento(record_now, array_pedimentoObj[tc], pedimento_id);
                         }
                     }
@@ -473,10 +476,11 @@ define(['N/record', 'N/search'], (record, search) => {
     function getValuesToLine(record_now, noLinRecNvo) {
         try {
             var validateToCreateMaster = false
-            var array_pedimentoObj =[];
+            var array_pedimentoObj = [];
             var sublista = 'inventory';
             var campo_rate = 'unitcost';
             var campo_cantidad = 'adjustqtyby';
+            var tipoMoviento = record_now.getValue('custbody_efx_ped_type_movement');
             //Por ej, considerando 3 lineas, habria que iterar cada una, marcar la casilla de pedimento y agregar el numero de pedimento
             //Recorrer los articulos del receipt y ponerles el pedimento
             for (i = 0; i < noLinRecNvo; i++) {
@@ -513,7 +517,16 @@ define(['N/record', 'N/search'], (record, search) => {
                     var arrInvDetail = []
                     for (let indexInvDet = 0; indexInvDet < countInventoryDetail; indexInvDet++) {
                         log.debug({ title: 'inventoryDetail', details: inventoryDetail });
-                        var invDetNum = inventoryDetail.getSublistValue({ sublistId: 'inventoryassignment', fieldId: 'receiptinventorynumber', line: indexInvDet })
+                        if (tipoMoviento === '1') {
+                            // En movimiento de entrada se obtiene el numero de lote por el fieldID receiptinventorynumber
+                            var invDetNum = inventoryDetail.getSublistValue({ sublistId: 'inventoryassignment', fieldId: 'receiptinventorynumber', line: indexInvDet })
+                        } else {
+                            // En tipo de movimiento de consumo se obtiene el lote por medio del ID del mismo
+                            var invDetNum = parseFloat(inventoryDetail.getSublistValue({ sublistId: 'inventoryassignment', fieldId: 'issueinventorynumber', line: indexInvDet }));
+                            var loteResults = search.lookupFields({ type: search.Type.INVENTORY_NUMBER_ITEM, id: invDetNum, columns: ['inventorynumber'] });
+                            log.debug({ title: 'loteResults', details: loteResults });
+                            invDetNum = loteResults.inventorynumber[0].text;
+                        }
                         var invDetQty = inventoryDetail.getSublistValue({ sublistId: 'inventoryassignment', fieldId: 'quantity', line: indexInvDet })
                         arrInvDetail.push({ invDetNum, invDetQty })
                     }
@@ -666,29 +679,73 @@ define(['N/record', 'N/search'], (record, search) => {
         }
     }
 
-    function generateMasterToPedimento(record_now, objToCreate, ubicacionLinea) {
-        try {
-            var ped_master_record = record.create({ type: 'customrecord_efx_ped_master_record', });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_number', value: objToCreate.pedimento });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_date', value: record_now.getValue({ fieldId: 'trandate' }) });
-            ped_master_record.setValue({ fieldId: 'custrecord_exf_ped_location', value: objToCreate.ubicacion });
-            ped_master_record.setValue({ fieldId: 'custrecord_exf_ped_item', value: objToCreate.item });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_serial_lote', value: objToCreate.noSerie });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_available', value: objToCreate.cantidad });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_exchange', value: record_now.getValue({ fieldId: 'exchangerate' }) });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_adnumber', value: 'numeroAduana' });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_adname', value: 'NombreAduana' });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_price', value: objToCreate.costo });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_eta', value: record_now.getValue({ fieldId: 'trandate' }) });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_etd', value: record_now.getValue({ fieldId: 'trandate' }) });
-            ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_total', value: objToCreate.total });
-            var pedimento_id = ped_master_record.save();
-            log.debug({ title: 'Maestro de pedimento generado', details: ped_master_record });
-            log.audit({ title: 'Maestro de pedimento generado', details: pedimento_id });
-            return pedimento_id
-        } catch (e) {
-            log.error({ title: 'Error generateMasterToPedimento:', details: e });
+    function generateMasterToPedimento(record_now, objToCreate, tipoMovmnt) {
+        if (tipoMovmnt === '1') {
+            try {
+                var ped_master_record = record.create({ type: 'customrecord_efx_ped_master_record', });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_number', value: objToCreate.pedimento });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_date', value: record_now.getValue({ fieldId: 'trandate' }) });
+                ped_master_record.setValue({ fieldId: 'custrecord_exf_ped_location', value: objToCreate.ubicacion });
+                ped_master_record.setValue({ fieldId: 'custrecord_exf_ped_item', value: objToCreate.item });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_serial_lote', value: objToCreate.noSerie });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_available', value: objToCreate.cantidad });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_exchange', value: record_now.getValue({ fieldId: 'exchangerate' }) });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_adnumber', value: 'numeroAduana' });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_adname', value: 'NombreAduana' });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_price', value: objToCreate.costo });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_eta', value: record_now.getValue({ fieldId: 'trandate' }) });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_etd', value: record_now.getValue({ fieldId: 'trandate' }) });
+                ped_master_record.setValue({ fieldId: 'custrecord_efx_ped_total', value: objToCreate.total });
+                var pedimento_id = ped_master_record.save();
+                log.debug({ title: 'Maestro de pedimento generado', details: ped_master_record });
+                log.audit({ title: 'Maestro de pedimento generado', details: pedimento_id });
+                return pedimento_id
+            } catch (e) {
+                log.error({ title: 'Error generateMasterToPedimento:', details: e });
+            }
+
+        } else {
+            try {
+                var buscaMasterItem = search.create({
+                    type: 'customrecord_efx_ped_master_record',
+                    filters: [
+                        ['isinactive', search.Operator.IS, 'F']
+                        , 'AND',
+                        ['custrecord_efx_ped_serial_lote', search.Operator.IS, objToCreate.noSerie]
+                    ],
+                    columns: [
+                        search.createColumn({ name: 'internalid' }),
+                    ]
+                });
+                // se ejecuta la busqueda anterior
+                var ejecutar_master = buscaMasterItem.run();
+                var resultado_master = ejecutar_master.getRange(0, 100);
+                var id_master_consume = resultado_master[0].getValue({ name: 'internalid' })
+                log.audit({ title: 'resultado_master', details: id_master_consume });
+                var ped_master_record_edit = record.load({ type: record.Type.CUSTOM_RECORD, id: 'id_master_consume'});
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_date', value: record_now.getValue({ fieldId: 'trandate' }) });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_exf_ped_location', value: objToCreate.ubicacion });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_exf_ped_item', value: objToCreate.item });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_serial_lote', value: objToCreate.noSerie });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_available', value: objToCreate.cantidad });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_exchange', value: record_now.getValue({ fieldId: 'exchangerate' }) });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_adnumber', value: 'numeroAduana' });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_adname', value: 'NombreAduana' });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_price', value: objToCreate.costo });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_eta', value: record_now.getValue({ fieldId: 'trandate' }) });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_etd', value: record_now.getValue({ fieldId: 'trandate' }) });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_total', value: objToCreate.total });
+                ped_master_record_edit.setValue({ fieldId: 'custrecord_efx_ped_number', value: objToCreate.pedimento });
+                var pedimento_id = ped_master_record_edit.save();
+                log.debug({ title: 'Maestro de pedimento editado', details: ped_master_record_edit });
+                log.audit({ title: 'Maestro de pedimento editado', details: pedimento_id });
+                return pedimento_id
+                
+            } catch (e) {
+                log.error({ title: 'Error generateMasterToPedimento consume:', details: e });
+            }
         }
+
     }
 
     function generateHistoricToPedimento(record_now, objToCreate, pedimento_id) {
@@ -856,7 +913,7 @@ define(['N/record', 'N/search'], (record, search) => {
 
         return arregloBusqueda;
     }
-    
+
     const consultaPedimentos = (cantidad_ped, idPedimentos) => {
 
         log.audit({ title: 'cantidad_ped', details: cantidad_ped });
